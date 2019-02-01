@@ -391,12 +391,29 @@ public class Eclipse {
 		}
 
 		JDownloadManager manager = new JDownloadManager();
-		manager.download(getEclipseUrl(eclipseVersion, eclipseMirror), target, true, hash);
 		String eclipseFolder = "eclipse";
-		if (OS.isMac() && new File(target, "Eclipse.app").exists()) {
+		if (OS.isMac()) {
+			manager.download(getEclipseUrl(eclipseVersion, eclipseMirror), target, hash);
+			unpackDMG(new File(target, getEclipseInstaller(eclipseVersion)), target);
 			eclipseFolder = "Eclipse.app";
+		} else {
+			manager.download(getEclipseUrl(eclipseVersion, eclipseMirror), target, true, hash);
 		}
 		return new Eclipse(new File(target, eclipseFolder));
+	}
+
+	private static void unpackDMG(File file, File target) {
+		try {
+		Process process = Runtime.getRuntime().exec("hdiutil attach " + file);
+		process.waitFor();
+		process = Runtime.getRuntime().exec("cp -R /Volumes/Eclipse/Eclipse.app " + target);
+		process.waitFor();
+		process = Runtime.getRuntime().exec("hdiutil detach /Volumes/Eclipse");
+		process.waitFor();
+		} catch (Exception e) {
+			log.error("Installation failed!", e);
+		}
+		
 	}
 
 	private static String getEclipseUrl(String eclipseVersion, String eclipseMirror) {
@@ -419,7 +436,7 @@ public class Eclipse {
 			archive = "zip";
 		} else if (os_property.contains("mac")) {
 			platform = "macosx-cocoa";
-			archive = "tar.gz";
+			archive = "dmg";
 		}
 
 		if (platform == null) {
